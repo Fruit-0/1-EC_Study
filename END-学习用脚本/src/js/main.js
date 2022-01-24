@@ -33,7 +33,7 @@ function main() {
     logd("开始执行脚本...")
 
 
-    do1();
+    do7();
 
 
 }
@@ -52,54 +52,263 @@ function autoServiceStart(time) {
     return isServiceOk();
 }
 
-function do1(){
-    let easyedge = {
-        "type": "easyedge",
-
+function do1() {
+    if (!file.exists("/sdcard/tessdata/eng.traineddata")) {
+        loge("copy文件1");
+        file.mkdirs("/sdcard/tessdata/")
+        if (file.exists("/sdcard/tessdata/")) {
+            saveResToFile("eng.traineddata","/sdcard/tessdata/eng.traineddata")
+            loge("copy文件1ok");
+        }
     }
-    let inited = ocr.initOcr(easyedge)
+
+    if (!file.exists("/sdcard/tessdata/chi_sim.traineddata")) {
+        loge("copy文件2");
+        if (file.exists("/sdcard/tessdata/")) {
+            saveResToFile("chi_sim.traineddata","/sdcard/tessdata/chi_sim.traineddata")
+            loge("copy文件2ok");
+        }
+    }
+
+
+    //Tesseract模块初始化参数
+    let tessInitMap = {
+        "type": "tess",
+        "language": "chi_sim",
+        "debug": false,
+        "psm": 1,
+        "tessedit_char_blacklist": "",
+        "tessedit_char_whitelist": "",
+        "save_blob_choices": ""
+    }
+
+    let inited = ocr.initOcr(tessInitMap)
+    logd("初始化结果 -> " + inited);
+    if (!inited) {
+        loge("error : " + ocr.getErrorMsg());
+        return;
+    }else {
+        loge("初始化成功");
+    }
+    var request = image.requestScreenCapture(10000, 0);
+
+    if (!request) {
+        request = image.requestScreenCapture(10000, 0);
+    }
+
+    sleep(1000)
+    //读取一个bitmap
+    let bitmap = image.captureScreenBitmap("jpg", 60, 265, 330, 330, 100);
+    if (!bitmap) {
+        loge("读取图片失败");
+        return;
+    }else {
+        loge("读取图片成功");
+    }
+
+    // 对图片进行识别
+    let result = ocr.ocrBitmap(bitmap, 20 * 1000, {});
+    if (result) {
+        logd("ocr结果-》 " + JSON.stringify(result));
+        for (var i = 0; i < result.length; i++) {
+            var value = result[i];
+            logd("文字 : " + value.label + " x: " + value.x + " y: " + value.y + " width: " + value.width + " height: " + value.height);
+        }
+    } else {
+        logw("未识别到结果");
+    }
+
+    bitmap.recycle();
+    //释放所有资源
+    ocr.releaseAll();
+
+}
+
+function do2() {
+    // startEnv()
+
+    var request = image.requestScreenCapture(10000, 0);
+
+    if (!request) {
+        request = image.requestScreenCapture(10000, 0);
+    }
+    let baiduOnlineInitMap = {
+        "type": "baiduOnline",
+        "ak": "xx",
+        "sk": "xx"
+    }
+
+    let inited = ocr.initOcr(baiduOnlineInitMap)
     logd("初始化结果 -> " + inited);
     if (!inited) {
         loge("error : " + ocr.getErrorMsg());
         return;
     }
-
-    let initServer = ocr.initOcrServer(5 * 1000);
-    logd("initServer " + initServer);
-    if (!initServer) {
-        loge("initServer error : " + ocr.getErrorMsg());
+    sleep(1000)
+    //读取一个bitmap
+    let bitmap = image.captureScreenBitmap("jpg", -1, -1, 200, 300, 100);
+    if (!bitmap) {
+        loge("读取图片失败");
         return;
     }
-    ocr.setDaemonServer(true,500);
-    for (var ix = 0; ix < 20; ix++) {
-
-        //读取一个bitmap
-        let bitmap = image.captureScreenBitmap("jpg",300,300,600,600,90);
-        if (!bitmap) {
-            loge("读取图片失败");
-            continue;
+    // URL 参数参见 ： https://ai.baidu.com/ai-doc/OCR/tk3h7y2aq
+    // 对图片进行识别
+    let result = ocr.ocrBitmap(bitmap, 20 * 1000, {"url": "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate"});
+    if (result) {
+        logd("ocr结果-》 " + JSON.stringify(result));
+        for (var i = 0; i < result.length; i++) {
+            var value = result[i];
+            logd("文字 : " + value.label + " x: " + value.x + " y: " + value.y + " width: " + value.width + " height: " + value.height);
         }
-        console.time("1")
-        logd("start---ocr");
-        // 对图片进行识别
-        let result = ocr.ocrBitmap(bitmap, 20 * 1000, {});
-        logd(result)
-        if (result) {
-            logd("ocr结果-》 " + JSON.stringify(result));
-            for (var i = 0; i < result.length; i++) {
-                var value = result[i];
-                logd("文字 : " + value.label + " x: " + value.x + " y: " + value.y + " width: " + value.width + " height: " + value.height);
-            }
-        } else {
-            logw("未识别到结果");
-        }
-        bitmap.recycle();
-        logd("耗时: " + console.timeEnd(1) + " ms")
-        sleep(1000);
-        logd("ix = "+ix)
+    } else {
+        logw("未识别到结果 " + ocr.getErrorMsg());
     }
+
+    bitmap.recycle();
     //释放所有资源
     ocr.releaseAll();
+
+
+}
+
+function do3() {
+
+    logd("isServiceOk " + isServiceOk());
+    startEnv()
+    logd("isServiceOk " + isServiceOk());
+
+    var request = image.requestScreenCapture(10000, 0);
+
+    if (!request) {
+        request = image.requestScreenCapture(10000, 0);
+    }
+    logd("申请截图结果... " + request)
+    if (!request) {
+        loge("申请截图权限失败,检查是否开启后台弹出,悬浮框等权限")
+        exit()
+    }
+    //申请完权限至少等1s(垃圾设备多加点)再截图,否则会截不到图
+    sleep(1000)
+    for (let i = 0; i < 10; i++) {
+        var cap = image.captureScreenBitmap("jpg", 100, 100, 200, 300, 100);
+        logd("截图数据: " + cap)
+        sleep(1000)
+        //图片要回收
+        image.recycle(cap)
+    }
+}
+
+
+function do4(){
+    image.initOpenCV();
+
+    // 截图
+    var requestImg = image.requestScreenCapture(10000, 0);
+    if (!requestImg) {
+        requestImg = image.requestScreenCapture(10000, 0);
+    }
+    if (!requestImg) {
+        toast("申请截图权限失败!")
+        setCurrentStatus("申请截图权限失败! 请重启无障碍 或者重启手机重试!")
+        return false;
+    }
+
+    // setCurrentStatus("检测当前页面")
+    // 游戏登录页
+    let menu = findImage("18+");
+    if (menu) {
+        // toast("当前在登录界面")
+        return ["index"]
+    }else {
+        logi("未找到");
+
+
+    }
+
+}
+
+function do5(){
+    var selectors= clz("android.widget.TextView").id("tv.danmaku.bili:id/expand_search");
+    let click1 = click(selectors);
+
+    if (click1){
+        toast("点击成功");
+        var selectors1= clz("android.widget.EditText").id("tv.danmaku.bili:id/search_src_text");
+        var result = inputText(selectors1,"我是内容");
+        if (result){
+            toast("是");
+        } else {
+            toast("否");
+        }
+    } else {
+        toast("点击失败");
+    }
+}
+
+function do6(){
+    var selectors1= clz("android.widget.EditText").id("tv.danmaku.bili:id/search_src_text");
+    var result = inputText(selectors1,"我是内容");
+    if (result){
+        toast("是");
+    } else {
+        toast("否");
+    }
+}
+
+function do7(){
+    var request = require('request');
+    var url = "http://127.0.0.1:20390/agentEvent";
+    var params = {
+        "type": "enter"
+    };
+    request({
+        url: url,
+        method: "POST",
+        json: true,
+        headers: {
+            "content-type": "application/json",
+        },
+        body: params
+    }, function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            console.log(body)
+        } else {
+            console.log(error)
+        }
+    });
+
+}
+
+
+
+
+
+/**
+ * 自动找图
+ * @param name
+ * x:left   y:bottom
+ * @returns boolean
+ */
+function findImage(name) {
+    let width = device.getScreenWidth();
+    let height = device.getScreenHeight();
+    //申请完权限等1s再截图,否则会截不到图
+    sleep(1000)
+    //从工程目录下res文件夹下读取sms.png文件
+    var sms = readResAutoImage(name + ".png");
+    // 动态获取坐标点
+    //在当前屏幕中查找，并且限制只查找一个
+    var points = image.findImageEx(sms,0,0,width,height,0.7, 0.9, 21, 5);
+    logd("points " + JSON.stringify(points));
+    //这玩意是个数组
+    if (points) {
+        let goods = points[0];
+        return {
+            "x": goods.left,
+            "y": goods.bottom
+        };
+    }
+    return false
 
 }
 

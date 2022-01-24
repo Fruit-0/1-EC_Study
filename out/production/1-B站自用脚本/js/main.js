@@ -22,22 +22,24 @@
  */
 
 function main() {
-    //开始再这里编写代码了！！
-    toast("Hello World");
-    var name = readConfigString("name");
-    logd("姓名: " + name);
-    logd("年龄: " + readConfigString("age"));
-    logd("听音乐: " + readConfigString("music"));
-    logd("是不是一年级: " + readConfigString("one"));
-    logd("备注: " + readConfigString("mark"));
     //如果自动化服务正常
     if (!autoServiceStart(3)) {
         logd("自动化服务启动失败，无法执行脚本")
         exit();
         return;
     }
-    logd("开始执行脚本...")
-    home();
+    //初始化配置信息
+    var configurationsStatus = initConfigurations();
+    if (configurationsStatus) {
+        // logd("开始执行脚本主逻辑...");
+        //通用异常处理的子线程（时刻处理预期的异常）
+        exceptionHandler();
+
+        //主逻辑
+        doMain();
+    }
+
+
 }
 
 function autoServiceStart(time) {

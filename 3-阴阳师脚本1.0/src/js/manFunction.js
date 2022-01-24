@@ -35,7 +35,11 @@ let isInit = false;
 let notDetectedPage = 0;
 
 
-
+/**
+ * 快捷搜索
+ * @type {boolean}
+ */
+let quickSearch = false;
 
 
 
@@ -96,6 +100,7 @@ function runMain() {
         toast("检查通过");
     }
 
+    logd("检测页面")
     // 检测页面
     let page = testIngPage();// index
     logd(page)
@@ -104,58 +109,101 @@ function runMain() {
         notDetectedPage = 0;
     }
 
+
+    // 判断在登录页面
+    if (page[0] == "index") {
+        setCurrentStatus("当前在登录页")
+        //点击【进入游戏】
+        clickPoint(977,897)
+
+    }
+
 }
 
 
-
+/**
+ * 检测当前页面 妄想山海
+ * 返回页面标识和 x y
+ */
 function testIngPage() {
-    let easyedge = {
-        "type": "easyedge",
+    image.initOpenCV();
+
+    // setCurrentStatus("检测当前页面")
+    // 游戏登录页
+    let menu = findImage("18+");
+    if (menu) {
+        // toast("当前在登录界面")
+        return ["index"]
+    }else {
+        logi("未找到");
+
 
     }
-    let inited = ocr.initOcr(easyedge)
-    logd("初始化结果 -> " + inited);
-    if (!inited) {
-        loge("error : " + ocr.getErrorMsg());
-        return;
+
+
+
+
+
+
+}
+/**
+ * 自动找图
+ * @param name
+ * x:left   y:bottom
+ * @returns boolean
+ */
+function findImage(name) {
+    let width = device.getScreenWidth();
+    let height = device.getScreenHeight();
+    //申请完权限等1s再截图,否则会截不到图
+    sleep(1000)
+    //从工程目录下res文件夹下读取sms.png文件
+    var sms = readResAutoImage(name + ".png");
+    // 动态获取坐标点
+    //在当前屏幕中查找，并且限制只查找一个
+    var points = image.findImageEx(sms,0,0,width,height,0.7, 0.9, 21, 5);
+    logd("points " + JSON.stringify(points));
+    //这玩意是个数组
+    if (points) {
+        let goods = points[0];
+        return {
+            "x": goods.left,
+            "y": goods.bottom
+        };
+    }
+    return false
+
+}
+
+/**
+ * 关闭弹窗
+ */
+function clossArth() {
+    // 游戏内弹窗
+    let points = findImage("clos")
+    if (points) {
+        let x = points.x;
+        let y = points.y;
+        clickPoint(x, y);
+        sleep(500)
+        clickPoint(x, y);
+        sleep(500)
+        clickPoint(x, y);
+        sleep(500)
     }
 
-    let initServer = ocr.initOcrServer(5 * 1000);
-    logd("initServer " + initServer);
-    if (!initServer) {
-        loge("initServer error : " + ocr.getErrorMsg());
-        return;
+    // 游戏启动页弹窗
+    let points2 = findImage("clos2")
+    if (points2) {
+        let x = points2.x;
+        let y = points2.y;
+        clickPoint(x, y);
+        sleep(500)
+        clickPoint(x, y);
+        sleep(500)
+        clickPoint(x, y);
+        sleep(500)
     }
-    ocr.setDaemonServer(true,500);
-    for (var ix = 0; ix < 20; ix++) {
-
-        //读取一个bitmap
-        let bitmap = image.captureScreenBitmap("jpg",300,300,600,600,90);
-        if (!bitmap) {
-            loge("读取图片失败");
-            continue;
-        }
-        console.time("1")
-        logd("start---ocr");
-        // 对图片进行识别
-        let result = ocr.ocrBitmap(bitmap, 20 * 1000, {});
-        logd(result)
-        if (result) {
-            logd("ocr结果-》 " + JSON.stringify(result));
-            for (var i = 0; i < result.length; i++) {
-                var value = result[i];
-                logd("文字 : " + value.label + " x: " + value.x + " y: " + value.y + " width: " + value.width + " height: " + value.height);
-            }
-        } else {
-            logw("未识别到结果");
-        }
-        bitmap.recycle();
-        logd("耗时: " + console.timeEnd(1) + " ms")
-        sleep(1000);
-        logd("ix = "+ix)
-    }
-    //释放所有资源
-    ocr.releaseAll();
 
 
 }
@@ -274,6 +322,9 @@ function openApp() {
     }
     toast("等待8秒")
     sleep(8000);
+    clickPoint(5, 5);
+
+
 }
 /**
  * 设置当前悬浮窗信息
